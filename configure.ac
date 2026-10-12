@@ -46,6 +46,7 @@ AC_CHECK_HEADERS([fcntl.h stdlib.h string.h sys/socket.h time.h sys/time.h syslo
 # Source characteristics
 AC_DEFINE([_GNU_SOURCE],   [1], [Uses GNU-specific APIs (if available)])
 AC_DEFINE([_XOPEN_SOURCE], [700], [Uses X/Open and POSIX APIs])
+AC_DEFINE([_DARWIN_C_SOURCE], [1], [Uses macOS extensions hidden by _XOPEN_SOURCE (if available)])
 AC_DEFINE([__BSD_VISIBLE], [1], [Uses BSD-specific APIs (if available)])
 
 # Check for availability of non-portable sched_getaffinity() function (one of
@@ -76,13 +77,16 @@ AC_CHECK_LIB([pthread], [pthread_create], [PTHREAD_LIBS=-lpthread
               AC_DEFINE([HAVE_LIBPTHREAD],,
                         [Whether libpthread was found])])
 
-# librt
-AC_CHECK_FUNC([timer_create], [AC_MSG_RESULT([timer_create was found without librt.])],
-              [AC_CHECK_LIB([rt], [timer_create],
-                            [AC_MSG_RESULT([timer_create was found in librt.])
+# librt (clock_gettime() is in librt on older glibc; macOS has no librt)
+AC_CHECK_FUNC([clock_gettime], [AC_MSG_RESULT([clock_gettime was found without librt.])],
+              [AC_CHECK_LIB([rt], [clock_gettime],
+                            [AC_MSG_RESULT([clock_gettime was found in librt.])
                                            RT_LIBS=-lrt],
-                            [AC_MSG_ERROR([timer_create could not be found.])])
+                            [AC_MSG_ERROR([clock_gettime could not be found.])])
               ])
+
+# Not every platform (notably macOS) can select the clock of a condition
+AC_CHECK_FUNCS([pthread_condattr_setclock])
 
 # Include libdl for dlopen() if necessary
 AC_CHECK_LIB([dl], [dlopen],
