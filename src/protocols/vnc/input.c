@@ -71,9 +71,19 @@ int guac_vnc_user_size_handler(guac_user* user, int width, int height) {
 
     /* Get the Guacamole VNC client */
     guac_vnc_client* vnc_client = (guac_vnc_client*) user->client->data;
+    rfbClient* rfb_client = vnc_client->rfb_client;
+
+    /* The VNC client object does not exist until the connection, including
+     * any prompt for credentials, has completed. Until then, remember the
+     * requested size; the initial resize sent once connected uses it. */
+    if (rfb_client == NULL) {
+        user->info.optimal_width = width;
+        user->info.optimal_height = height;
+        return 0;
+    }
 
     /* Send display update */
-    guac_vnc_display_set_size(vnc_client->rfb_client, width, height);
+    guac_vnc_display_set_size(rfb_client, width, height);
 
     return 0;
 
