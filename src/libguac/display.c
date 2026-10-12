@@ -103,8 +103,6 @@ static unsigned long guac_display_nproc() {
     /* Fallback implementation that does not query the number of CPUs available
      * at all, returning an error code (as portable as it gets) */
 
-    long cpu_count = 0;
-
 #endif
 
     return 0;

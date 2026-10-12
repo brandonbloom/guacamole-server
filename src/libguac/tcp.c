@@ -33,7 +33,7 @@ int guac_tcp_connect(const char* hostname, const char* port, const int timeout) 
 
     int retval;
 
-    int fd = EBADFD;
+    int fd = -1;
     struct addrinfo* addresses;
     struct addrinfo* current_address;
 

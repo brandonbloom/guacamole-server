@@ -32,9 +32,14 @@
 #define GUAC_PROTOCOL_LIBRARY_PREFIX "libguac-client-"
 
 /**
- * String suffix which ends the library filename of all client plugins.
+ * String suffix which ends the library filename of all client plugins. On
+ * macOS, libtool names shared libraries ".dylib".
  */
+#ifdef __APPLE__
+#define GUAC_PROTOCOL_LIBRARY_SUFFIX ".dylib"
+#else
 #define GUAC_PROTOCOL_LIBRARY_SUFFIX ".so"
+#endif
 
 /**
  * The maximum number of characters (COUNTING NULL TERMINATOR) to allow

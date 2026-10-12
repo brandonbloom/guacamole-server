@@ -17,6 +17,7 @@
  * under the License.
  */
 
+#include "config.h"
 #include "guacamole/flag.h"
 
 #include <pthread.h>
@@ -30,6 +31,18 @@
  */
 #define NANOS_PER_SECOND 1000000000L
 
+/**
+ * The clock that timeouts for pthread_cond_timedwait() are measured against.
+ * Where the clock of a condition can be chosen, it is the monotonic clock,
+ * which time changes do not affect. Elsewhere (macOS), conditions always use
+ * the realtime clock.
+ */
+#ifdef HAVE_PTHREAD_CONDATTR_SETCLOCK
+#define GUAC_FLAG_CLOCK CLOCK_MONOTONIC
+#else
+#define GUAC_FLAG_CLOCK CLOCK_REALTIME
+#endif
+
 void guac_flag_init(guac_flag* event_flag) {
 
     /* The condition used by guac_flag to signal changes in its
@@ -38,7 +51,9 @@ void guac_flag_init(guac_flag* event_flag) {
      * time changes) */
     pthread_condattr_t cond_attr;
     pthread_condattr_init(&cond_attr);
-    pthread_condattr_setclock(&cond_attr, CLOCK_MONOTONIC);
+#ifdef HAVE_PTHREAD_CONDATTR_SETCLOCK
+    pthread_condattr_setclock(&cond_attr, GUAC_FLAG_CLOCK);
+#endif
     pthread_condattr_setpshared(&cond_attr, PTHREAD_PROCESS_SHARED);
     pthread_cond_init(&event_flag->value_changed, &cond_attr);
 
@@ -151,7 +166,7 @@ int guac_flag_timedwait_and_lock(guac_flag* event_flag,
     }
 
     struct timespec ts_timeout;
-    clock_gettime(CLOCK_MONOTONIC, &ts_timeout);
+    clock_gettime(GUAC_FLAG_CLOCK, &ts_timeout);
 
     uint64_t nsec_timeout = msec_timeout * 1000000 + ts_timeout.tv_nsec;
     ts_timeout.tv_sec += nsec_timeout / NANOS_PER_SECOND;
