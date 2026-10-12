@@ -1,0 +1,12 @@
+services:
+  guacd:
+    image: ${GUACD_IMAGE:-guacamole/guacd:1.6.0}
+    environment:
+      LOG_LEVEL: debug
+  repro:
+    image: python:3-alpine
+    depends_on: [guacd]
+    volumes: ["./repro.py:/repro.py:ro"]
+    entrypoint: ["sh", "-c", "sleep 2; python3 -u /repro.py guacd $$REPRO_ARGS"]
+    environment:
+      REPRO_ARGS: ${REPRO_ARGS:-}
