@@ -636,6 +636,37 @@ int guac_client_end_multiple_frames(guac_client* client, int frames) {
 
 }
 
+/**
+ * Opens the given client plugin library from the directory containing the
+ * libguac library itself.
+ *
+ * @param protocol_lib
+ *     The filename of the client plugin library.
+ *
+ * @return
+ *     The dlopen() handle of the plugin library, or NULL if it could not be
+ *     opened from that directory.
+ */
+static void* guac_client_load_plugin_beside_libguac(const char* protocol_lib) {
+
+    Dl_info info;
+    if (!dladdr((void*) guac_client_load_plugin, &info) || info.dli_fname == NULL)
+        return NULL;
+
+    const char* last_slash = strrchr(info.dli_fname, '/');
+    if (last_slash == NULL)
+        return NULL;
+
+    char path[4096];
+    int dir_length = last_slash - info.dli_fname + 1;
+    if (snprintf(path, sizeof(path), "%.*s%s", dir_length, info.dli_fname,
+                protocol_lib) >= (int) sizeof(path))
+        return NULL;
+
+    return dlopen(path, RTLD_LAZY);
+
+}
+
 int guac_client_load_plugin(guac_client* client, const char* protocol) {
 
     /* Reference to dlopen()'d plugin */
@@ -664,9 +695,19 @@ int guac_client_load_plugin(guac_client* client, const char* protocol) {
     /* Load client plugin */
     client_plugin_handle = dlopen(protocol_lib, RTLD_LAZY);
     if (!client_plugin_handle) {
-        guac_error = GUAC_STATUS_NOT_FOUND;
-        guac_error_message = dlerror();
-        return -1;
+
+        const char* error = dlerror();
+
+        /* Failing that, look beside libguac itself: plugins are installed in
+         * the same directory, which the dynamic linker may not search by
+         * default (macOS does not search a Homebrew or relocated libdir) */
+        client_plugin_handle = guac_client_load_plugin_beside_libguac(protocol_lib);
+        if (!client_plugin_handle) {
+            guac_error = GUAC_STATUS_NOT_FOUND;
+            guac_error_message = error;
+            return -1;
+        }
+
     }
 
     dlerror(); /* Clear errors */
